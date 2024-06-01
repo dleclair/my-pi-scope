@@ -23,8 +23,8 @@ int read_ads1015_sample(int i2c_bus, int device_address) {
     // Configure ADS1015 for single-ended input on AIN0 with default settings
     char config_data[3];
     config_data[0] = CONFIG_REG;
-    config_data[1] = 0x84;  // MSB: Single-shot, AIN0, ±4.096V, 1600SPS
-    config_data[2] = 0x83;  // LSB: No comparator, single-shot mode
+    config_data[1] = 0xC1;  // MSB: OS: start, MUX: AINP=AIN0 / AINN=GND, PGA = ±6.144V, MODE = Single
+    config_data[2] = 0x83;  // LSB: DR = 1600 SPS, COMP_MODE = traditional, COMP_POL = active low, COMP_LAT = non-latching, COMP_QUE = disable
 
     if (i2cWriteDevice(handle, config_data, 3) != 0) {
         fprintf(stderr, "Failed to write configuration\n");
