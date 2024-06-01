@@ -5,6 +5,8 @@
 #include <linux/proc_fs.h>
 
 #include "ads1015-io.h"
+#include "ads1015-sampler.h"
+
 
 static struct proc_dir_entry *ads1015_proc = NULL;
 
@@ -28,6 +30,8 @@ static int __init ads1015_init(void)
 	{
 		return -1;
 	}
+
+	ads1015_sampler_init();
 	return 0;
 }
 
