@@ -1,0 +1,16 @@
+/dts-v1/;
+/plugin/;
+/ {
+	compatible = "brcm,bcm2835";
+	fragment@0 {
+		target-path = "/";
+		__overlay__ {
+			ads1015_stream {
+				compatible = "ddl,ads1015_stream";
+				status = "okay";
+				label = "test";
+				my_value = <12>;
+			};
+		};
+	};
+};

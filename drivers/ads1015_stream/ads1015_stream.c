@@ -4,6 +4,7 @@
 #include <linux/i2c.h>
 #include <linux/ktime.h>
 #include <linux/hrtimer.h>
+#include <linux/gpio.h>
 
 
 MODULE_LICENSE("GPL");
@@ -54,6 +55,13 @@ static struct i2c_driver ads1015_driver = {
 };
 
 
+/* LED control */
+#define LED_GPIO 21
+#define LED_ON 1
+#define LED_OFF 0
+static int led_state;
+
+
 /* ADS1015 sample scheduler */
 static ktime_t ads1015_timer_interval;
 static struct hrtimer ads1015_timer;
@@ -74,10 +82,16 @@ enum hrtimer_restart ads1015_timer_event(struct hrtimer *t) {
 	u64 t1, t2, elapsed_time;
 	t1 = ktime_get_ns();
 	long sample_voltage = 0;
-	sample_voltage = read_ads1015_sample();
+	//sample_voltage = read_ads1015_sample();
 	t2 = ktime_get_ns();
 	elapsed_time = t2 - t1;
 	pr_info("sample: %ld uV, elapsed_time = %llu usecs\n", sample_voltage, elapsed_time);
+
+	/* toggle LED */
+	// led_state = led_state == LED_ON ? LED_OFF : LED_ON;
+	// gpio_set_value(LED_GPIO, led_state);
+
+	/* setup next interrupt */
 	long skips = hrtimer_forward_now(t, ads1015_timer_interval);
 	if (skips > 1) {
 		printk("skipped %ld intervals.", skips);
@@ -112,6 +126,14 @@ static int __init ads1015_stream_init(void) {
 	ads1015_timer.function = &ads1015_timer_event;
 	hrtimer_start(&ads1015_timer, ads1015_timer_interval, HRTIMER_MODE_REL);
 
+	/* setup the LED GPIO */
+	//if (gpio_request(LED_GPIO, "red-led")) {
+	//	pr_err("failed ot request GPIO\n");
+	//	return -1;
+	//}
+	// led_state = LED_OFF;
+	// gpio_direction_output(LED_GPIO, led_state);
+
 	pr_info("initialization complete.\n");
 	return 0;
 }
@@ -119,6 +141,33 @@ static int __init ads1015_stream_init(void) {
 
 static int ads1015_stream_probe(struct i2c_client *client) {
 	pr_info("device probed\n");
+	struct device *dev = &client->dev;
+	const char *label;
+	int my_value, ret;
+
+	/* check for device properties */
+	if (!device_property_present(dev, "label")) {
+		pr_err("ads1015_stream_probe - Error! Device property 'label' not found\n");
+		return -1;
+	}
+	if (!device_property_present(dev, "my_value")) {
+		pr_err("ads1015_stream_probe - Error! Device property 'my_value' not found\n");
+		return -1;
+	}
+
+	/* Read device properties */
+	ret = device_property_read_string(dev, "label", &label);
+	if (ret) {
+		pr_err("ads1015_stream_probe - Error! could not read 'label'\n");
+		return -1;
+	}
+	pr_info("ads1015_stream_probe - label: %s\n", label);
+	ret = device_property_read_u32(dev, "my_value", &my_value);
+	if (ret) {
+		pr_err("ads1015_stream_probe = Error! could not read 'my_value'\n");
+		return -1;
+	}
+	pr_info("ads1015_stream_probe - my_value: %d\n", my_value);
 	return 0;
 }
 
@@ -132,6 +181,12 @@ static void ads1015_stream_remove(struct i2c_client *client) {
 	u16 config_data = 0xC1E3;
 	int result = i2c_smbus_write_word_data(i2c_client, CONFIG_REG, config_data);
 	pr_info("config write returned %d.\n", result);
+
+	// disable the LED GPIO
+	//gpio_set_value(LED_GPIO, LED_OFF);
+	//gpio_unexport(LED_GPIO);
+	//gpio_free(LED_GPIO);
+
 	pr_info("device removed\n");
 	return;
 }
